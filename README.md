@@ -1,3 +1,5 @@
+# !WARNING! THIS DOES NOT WORK YET !WARNING!
+
 # EnfusionScriptObfuscator
 EnfusionScript Obfuscator
 
