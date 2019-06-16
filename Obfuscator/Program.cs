@@ -13,19 +13,13 @@ namespace Obfuscator
                 string root_path = args[0];
                 List<string> enfusion_scripts = EnfusionScriptFinder.FindScripts(root_path);
 
-                foreach (var script in enfusion_scripts)
+                try
                 {
-                    Console.WriteLine("Processing '" + script + "'");
-                    try
-                    {
-                        Obfuscator.Obfuscate(script);
-                    } catch (Exception e)
-                    {
-                        Console.WriteLine("Could not Obfuscate Script '" + script + "' Reason: " + e.Message);
-                    }
+                    Obfuscator.Obfuscate(enfusion_scripts.ToArray());
+                } catch (Exception e)
+                {
+                    Console.WriteLine("Could not Obfuscate Scripts. Reason: " + e.Message);
                 }
-
-
             } catch(Exception e)
             {
                 Console.WriteLine(e.Message);

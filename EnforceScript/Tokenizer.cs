@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace EnforceScript
 {
@@ -46,6 +47,8 @@ namespace EnforceScript
         @void,
         @typename,
         @auto,
+        @array,
+        @Vector2,
 
         //Control Flow
         @if,
@@ -58,6 +61,9 @@ namespace EnforceScript
         @foreach,
 
         @symbol, // user defined symbol
+        @symbol_function,
+        @symbol_variable,
+        @symbol_class,
         @operator,
 
         @string_literal,
@@ -69,9 +75,11 @@ namespace EnforceScript
     {
         public Keyword keyword;
         public string value;
-    }
+    };
     public class Tokenizer
     {
+        public static Regex empty_or_whitespace_only = new Regex("^\\s*$");
+        public static Regex whitespace = new Regex("\\s");
         public static readonly string[] operators = {
             "+",
             "-",
@@ -102,68 +110,100 @@ namespace EnforceScript
             "!",
         };
 
-        public readonly string[] delimiter =
+        public static readonly string[] delimiter =
         {
             "\r",
             "\n",
+            "\t",
             ";",
-            // yes parenthesis aren't actually delimiter but for our usecase we dont really care about them
-            // at least yet...
+        };
+
+        // There are a LOT of symbols that we dont really care about
+        // Of course if this should ever be a complete tokenizer for Enfusion Script then of course we need to care about them
+        // We probably need to do that at some point anyway
+        public static readonly string[] ignore_chars =
+        {
             "(",
             ")",
             "{",
             "}",
+            ">",
+            "<",
         };
 
-        public List<Token> Tokenize(string content)
+        public static List<Token> Tokenize(string content)
         {
             var tokens = new List<Token>();
 
             content = content.Replace("\n", " ");
+            bool done = false;
 
-            foreach(var raw_word in content.Split(' '))
+            var words = content.Split(' ');
+            for(int index = 0; index < words.Length; index++)
             {
-                string word = raw_word;
-                    foreach(var delim in delimiter)
-                            word = word.Replace(delim, "");
-                if (word == "")
-                    continue;
+                var current_word = words[index];
+                current_word = current_word.Replace(";", "");
 
-                var token = new Token { keyword = Keyword.unknown};
-
-
-                // Is the word a keyword?
                 Keyword k;
-                if (Enum.TryParse(word, out k))
+                if (IsKeyword(current_word, out k))
+                    tokens.Add(new Token { keyword = k });
+                else if (IsFunctionCall(current_word))
+                    foreach (var symbol in ParseFunctionCall(current_word))
+                        tokens.Add(symbol);
+                else if (IsOperator(current_word))
+                    tokens.Add(new Token { keyword = Keyword.@operator, value = current_word });
+                else // gotta be a variable ....or a class name.. we need to support this
+                    tokens.Add(new Token { keyword = Keyword.symbol_variable, value = current_word });
+            }
+
+            return tokens;
+        }
+
+        public static bool IsKeyword(string word, out Keyword k)
+        {
+            if (Enum.TryParse(word, out k))
+                return true;
+            return false;
+        }
+
+        public static bool IsFunctionCall(string word)
+        {
+            if (word.Contains("("))
+                return true;
+            return false;
+        }
+
+        public static bool IsOperator(string word)
+        {
+            foreach (var op in operators)
+                if (op == word)
+                    return true;
+            return false;
+        }
+
+        public static List<Token> ParseFunctionCall(string call)
+        {
+            var symbols = call.Split('.');
+            var tokens = new List<Token>();
+
+            if (symbols.Length > 0) // chained function call
+            {
+                for(int i = 0; i < symbols.Length; i++)
                 {
-                    token.keyword = k;
-                }
-                else
-                {
-                    // is the word an operator?
-                    foreach (var op in operators)
+                    var symbol = symbols[i];
+                    var token = new Token { keyword = Keyword.symbol_variable, value = symbol };
+                    if (symbol.Contains("("))
                     {
-                        if (word == op)
-                        {
-                            token.keyword = Keyword.@operator;
-                            token.value = op;
-                        }
+                        token.keyword = Keyword.symbol_function;
+                        token.value = Regex.Replace(symbol, "\\(.*$", "");
                     }
 
-                    // otherwise it should be a custom symbol
-                    if (token.keyword == Keyword.unknown)
-                    {
-                        token.keyword = Keyword.symbol;
-                        token.value = word;
-                    }
-
-                }
-
-                if (token.keyword == Keyword.unknown)
-                    // TODO: this should probably be something like a "unknown token exception"
-                    throw new Exception("Unkown keyword '" + word + "'");
-                else
                     tokens.Add(token);
+                }
+            }
+            else // simple call without chaining
+            {
+                tokens.Add(new Token { keyword = Keyword.symbol_function, value = Regex.Replace(call, "\\(.*$", "") });
             }
 
             return tokens;

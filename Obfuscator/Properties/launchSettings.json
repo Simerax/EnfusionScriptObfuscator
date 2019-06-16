@@ -2,7 +2,7 @@
   "profiles": {
     "Obfuscator": {
       "commandName": "Project",
-      "commandLineArgs": "C:\\Users\\xaver\\source\\repos\\EnforceObfuscator\\test"
+      "commandLineArgs": "E:\\_Programmieren\\C#\\Projects\\EnfusionScriptObfuscator\\test"
     }
   }
 }

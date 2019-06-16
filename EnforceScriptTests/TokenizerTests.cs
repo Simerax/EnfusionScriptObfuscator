@@ -8,10 +8,6 @@ namespace EnforceScriptTests
 {
     class TokenizerTests
     {
-        public Tokenizer MakeTokenizer()
-        {
-            return new Tokenizer();
-        }
 
         public List<Token> MakeEmptyTokenList()
         {
@@ -19,14 +15,13 @@ namespace EnforceScriptTests
         }
 
         [Test]
-        public void ParseSingleCommand_Success()
+        public void ParseSingleCommand()
         {
             string input = "private";
-            var t = MakeTokenizer();
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@private });
 
-            var result = t.Tokenize("private");
+            var result = Tokenizer.Tokenize("private");
 
             Assert.AreEqual(expected, result);
         }
@@ -35,24 +30,165 @@ namespace EnforceScriptTests
         public void Parse_VariableDefinition()
         {
             string input = "static const string ModName;";
-            var t = MakeTokenizer();
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@static });
             expected.Add(new Token { keyword = Keyword.@const });
             expected.Add(new Token { keyword = Keyword.@string });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "ModName" });
-            /*
-            expected.Add(new Token { keyword = Keyword.@operator });
-            expected.Add(new Token { keyword = Keyword.@string_literal, value = "Test"});
-            */
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "ModName" });
 
-            var result = t.Tokenize(input);
+            var actual = Tokenizer.Tokenize(input);
 
-            Assert.AreEqual(expected, result);
+            Assert.AreEqual(expected, actual);
+        }
+
+
+        [Test]
+        public void AssignVariableToVariable()
+        {
+            string input = "static const string ModName = x";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.@static });
+            expected.Add(new Token { keyword = Keyword.@const });
+            expected.Add(new Token { keyword = Keyword.@string });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "ModName" });
+            expected.Add(new Token { keyword = Keyword.@operator, value = "=" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "x" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
         }
 
         [Test]
-        public void Parse_ClassDefinition()
+        public void AssignFunctionReturnValueToVariable()
+        {
+            string input = "static const string ModName = x()";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.@static });
+            expected.Add(new Token { keyword = Keyword.@const });
+            expected.Add(new Token { keyword = Keyword.@string });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "ModName" });
+            expected.Add(new Token { keyword = Keyword.@operator, value = "=" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "x" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Parse_FunctionCall()
+        {
+            string input = "m_nodes.Count()";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes"});
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "Count" });
+
+            var actual = Tokenizer.ParseFunctionCall(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Parse_ChainedFunctionCall()
+        {
+            string input = "m_nodes.Count().Nice()";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "Count" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "Nice" });
+
+            var actual = Tokenizer.ParseFunctionCall(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Parse_ChainedFunctionCallWithMemberAccess()
+        {
+            string input = "m_nodes.Count().Nice().member_var";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "Count" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "Nice" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "member_var" });
+
+            var actual = Tokenizer.ParseFunctionCall(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+
+        /*Reworking the Tokenizer.. these tests will eventual be reused*/
+        /*
+
+        [Test]
+        public void Parse_FunctionCallWithoutParameters()
+        {
+            string input = @"m_nodes.Count()";
+
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "Count" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+
+        [Test]
+        public void Parse_BuiltinArrayAndVectorType()
+        {
+            string input = @"ref array<ref Vector2> m_nodes;";
+
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.@ref });
+            expected.Add(new Token { keyword = Keyword.@array });
+            expected.Add(new Token { keyword = Keyword.@ref });
+            expected.Add(new Token { keyword = Keyword.Vector2 });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Parse_ComplexStructure01()
+        {
+            string input = @"
+class Area2d
+{
+	float m_nodes;
+	
+	void Area2d(float nodes)
+	{
+		m_nodes = nodes;
+	}
+}
+            ";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.@class });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "Area2d" });
+            expected.Add(new Token { keyword = Keyword.@float });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.@void });
+            expected.Add(new Token { keyword = Keyword.@symbol, value = "Area2d" });
+            expected.Add(new Token { keyword = Keyword.@float });
+            expected.Add(new Token { keyword = Keyword.@symbol, value = "nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.@operator, value = "=" });
+            expected.Add(new Token { keyword = Keyword.symbol, value = "nodes" });
+
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        [Test]
+        public void Parse_ComplexStructure02()
         {
             string input = @"
                 class BlurFade extends TimerBase
@@ -65,7 +201,6 @@ namespace EnforceScriptTests
                     }
                 }
             ";
-            var t = MakeTokenizer();
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@class });
             expected.Add(new Token { keyword = Keyword.symbol, value = "BlurFade" });
@@ -78,9 +213,10 @@ namespace EnforceScriptTests
             expected.Add(new Token { keyword = Keyword.symbol, value = "BlurFade" });
             expected.Add(new Token { keyword = Keyword.symbol, value = "OnInit" });
 
-            var result = t.Tokenize(input);
+            var result = Tokenizer.Tokenize(input);
 
             Assert.AreEqual(expected, result);
         }
+        */
     }
 }
