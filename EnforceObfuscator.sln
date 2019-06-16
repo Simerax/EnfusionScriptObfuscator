@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28922.388
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EnforceObfuscator", "EnforceObfuscator\EnforceObfuscator.csproj", "{A5274F0B-57A9-4EDC-9613-847EA2A1A47B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A5274F0B-57A9-4EDC-9613-847EA2A1A47B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A5274F0B-57A9-4EDC-9613-847EA2A1A47B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A5274F0B-57A9-4EDC-9613-847EA2A1A47B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A5274F0B-57A9-4EDC-9613-847EA2A1A47B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {1BC70FA8-4864-4E74-9BD8-5870555C57F8}
+	EndGlobalSection
+EndGlobal
