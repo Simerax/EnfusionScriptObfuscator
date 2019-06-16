@@ -2,7 +2,7 @@
 using System.IO;
 using System.Collections.Generic;
 
-namespace EnforceObfuscator
+namespace Obfuscator
 {
     class Program
     {

@@ -4,7 +4,7 @@ using System.Text;
 using System.IO;
 
 
-namespace EnforceObfuscator
+namespace Obfuscator
 {
     class DirectoryWalker
     {
