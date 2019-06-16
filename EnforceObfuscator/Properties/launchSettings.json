@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "EnforceObfuscator": {
-      "commandName": "Project",
-      "commandLineArgs": "C:\\Users\\xaver\\source\\repos\\EnforceObfuscator\\test"
-    }
-  }
-}
