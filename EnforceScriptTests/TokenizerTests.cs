@@ -13,6 +13,115 @@ namespace EnforceScriptTests
         {
             return new List<Token>();
         }
+        public List<Symbol> MakeEmptySymbolList()
+        {
+            return new List<Symbol>();
+        }
+
+
+        [Test]
+        public void SymbolFromWord()
+        {
+            string input = "private;";
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Symbol { value = "private" });
+            expected.Add(new Symbol { value = ";" });
+
+            var result = Tokenizer.ReadSymbols(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void ParseSymbols_ClassDefinition()
+        {
+            string input = @"
+                class BlurFade extends TimerBase
+                {
+                    protected bool m_fade_out;
+
+                    void BlurFade()
+                    {
+                        OnInit();
+                    }
+                }
+            ";
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Symbol { value = "class" });
+            expected.Add(new Symbol { value = "BlurFade" });
+            expected.Add(new Symbol { value = "extends" });
+            expected.Add(new Symbol { value = "TimerBase" });
+            expected.Add(new Symbol { value = "{" });
+            expected.Add(new Symbol { value = "protected" });
+            expected.Add(new Symbol { value = "bool" });
+            expected.Add(new Symbol { value = "m_fade_out" });
+            expected.Add(new Symbol { value = ";" });
+            expected.Add(new Symbol { value = "void" });
+            expected.Add(new Symbol { value = "BlurFade" });
+            expected.Add(new Symbol { value = "(" });
+            expected.Add(new Symbol { value = ")" });
+            expected.Add(new Symbol { value = "{" });
+            expected.Add(new Symbol { value = "OnInit" });
+            expected.Add(new Symbol { value = "(" });
+            expected.Add(new Symbol { value = ")" });
+            expected.Add(new Symbol { value = ";" });
+            expected.Add(new Symbol { value = "}" });
+            expected.Add(new Symbol { value = "}" });
+
+
+            var result = Tokenizer.ReadSymbols(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void ParseSymbols_VariableMemberAccess()
+        {
+            string input = "node._y;";
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Symbol { value = "node" });
+            expected.Add(new Symbol { value = "." });
+            expected.Add(new Symbol { value = "_y" });
+            expected.Add(new Symbol { value = ";" });
+
+            var result = Tokenizer.ReadSymbols(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void ParseSymbols_VariableDefinition_01()
+        {
+            string input = "static const string node;";
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Symbol { value = "static" });
+            expected.Add(new Symbol { value = "const" });
+            expected.Add(new Symbol { value = "string" });
+            expected.Add(new Symbol { value = "node" });
+            expected.Add(new Symbol { value = ";" });
+
+            var result = Tokenizer.ReadSymbols(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void ParseSymbols_FunctionCall_01()
+        {
+            string input = "nodes.add(x);";
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Symbol { value = "nodes" });
+            expected.Add(new Symbol { value = "." });
+            expected.Add(new Symbol { value = "add" });
+            expected.Add(new Symbol { value = "(" });
+            expected.Add(new Symbol { value = "x" });
+            expected.Add(new Symbol { value = ")" });
+            expected.Add(new Symbol { value = ";" });
+
+            var result = Tokenizer.ReadSymbols(input);
+
+            Assert.AreEqual(expected, result);
+        }
 
         [Test]
         public void ParseSingleCommand()
@@ -88,6 +197,36 @@ namespace EnforceScriptTests
 
             Assert.AreEqual(expected, actual);
         }
+
+        [Test]
+        public void Parse_FunctionCallWithParameters()
+        {
+            string input = "m_nodes.find(x)";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "find" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "x" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+
+        /*
+        [Test]
+        public void Parse_FunctionCallWithFunctionAsParameter()
+        {
+            string input = "m_nodes.find(x())";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "find" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "x" });
+
+            var actual = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, actual);
+        }
+        */
 
         [Test]
         public void Parse_ChainedFunctionCall()

@@ -5,6 +5,15 @@ using System.Text.RegularExpressions;
 
 namespace EnforceScript
 {
+    /*
+        TODO:
+        * "modded" class keyword has to check if the modded class is a "mod" class or a Standard DayZ Class.
+            * We can't obfuscate a Standard DayZ Class e.g. "MissionServer"
+        * Don't Obfuscate Standard Types like "Vector2" 
+            * This also applies to function calls of such classes!  
+    */
+
+
     public enum Keyword
     {
         // Function/Method modifiers
@@ -71,15 +80,68 @@ namespace EnforceScript
         @unknown,
     }
 
+    public enum SymbolType
+    {
+        variable,
+        function,
+        @class,
+    }
+
     public struct Token
     {
         public Keyword keyword;
         public string value;
     };
+
+    public struct Symbol
+    {
+        public string value;
+    };
+
     public class Tokenizer
     {
+
+        public static List<Symbol> ReadSymbols(string content)
+        {
+            var current_word = new Stack<char>();
+            var symbols = new List<Symbol>();
+            for (int i = 0; i < content.Length; i++)
+            {
+                var current_char = content[i];
+
+                if (IsDelimiter(current_char) || i+1 == content.Length)
+                {
+                    var word = string.Empty;
+                    foreach (var chr in current_word)
+                        word += chr;
+                    current_word.Clear();
+
+                    if (word.Length > 0)
+                    {
+                        // since the stack is fifo the word is actually stored in reverse so we gotta turn it back into the correct order
+                        symbols.Add(new Symbol { value = ReverseString(word) });
+                    }
+
+                    if (!IsWhitespace(current_char) && IsDelimiter(current_char))
+                        symbols.Add(new Symbol { value = current_char.ToString() });
+                } else
+                {
+                    current_word.Push(current_char);
+                }
+            }
+
+            return symbols;
+        }
+
+        public static string ReverseString(string input)
+        {
+            char[] arr = input.ToCharArray();
+            Array.Reverse(arr);
+            return new string(arr);
+        }
+
+
         public static Regex empty_or_whitespace_only = new Regex("^\\s*$");
-        public static Regex whitespace = new Regex("\\s");
         public static readonly string[] operators = {
             "+",
             "-",
@@ -110,12 +172,26 @@ namespace EnforceScript
             "!",
         };
 
-        public static readonly string[] delimiter =
+        public static readonly char[] whitespace =
         {
-            "\r",
-            "\n",
-            "\t",
-            ";",
+            ' ',
+            '\r',
+            '\n',
+            '\t',
+        };
+
+        public static readonly char[] delimiters =
+        {
+            ' ',
+            '\r',
+            '\n',
+            '\t',
+            ';',
+            '.',
+            '(',
+            ')',
+            '{',
+            '}',
         };
 
         // There are a LOT of symbols that we dont really care about
@@ -131,6 +207,25 @@ namespace EnforceScript
             "<",
         };
 
+
+
+        public static bool IsDelimiter(char c)
+        {
+            foreach (var delim in delimiters)
+                if (c == delim)
+                    return true;
+            return false;
+        }
+
+        public static bool IsWhitespace(char c)
+        {
+            foreach (var s in whitespace)
+                if (c == s)
+                    return true;
+            return false;
+        }
+
+
         public static List<Token> Tokenize(string content)
         {
             var tokens = new List<Token>();
@@ -143,6 +238,9 @@ namespace EnforceScript
             {
                 var current_word = words[index];
                 current_word = current_word.Replace(";", "");
+
+                if (empty_or_whitespace_only.IsMatch(current_word))
+                    continue;
 
                 Keyword k;
                 if (IsKeyword(current_word, out k))
@@ -192,13 +290,25 @@ namespace EnforceScript
                 {
                     var symbol = symbols[i];
                     var token = new Token { keyword = Keyword.symbol_variable, value = symbol };
+                    bool is_function = false;
                     if (symbol.Contains("("))
                     {
+                        is_function = true;
                         token.keyword = Keyword.symbol_function;
                         token.value = Regex.Replace(symbol, "\\(.*$", "");
                     }
 
                     tokens.Add(token);
+
+                    if (is_function)
+                    {
+                        string parameters = Regex.Replace(symbol, "^.*\\(", "");
+                        string current_word = string.Empty;
+
+                        parameters = Regex.Replace(parameters, "\\).*$", "");
+                        foreach (var parameter in Tokenizer.Tokenize(parameters))
+                            tokens.Add(parameter);
+                    }
                 }
             }
             else // simple call without chaining
