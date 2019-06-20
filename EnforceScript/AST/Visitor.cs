@@ -6,14 +6,20 @@ namespace EnforceScript.AST
 {
     public class Visitor
     {
-        public void visit(AST.Node node)
+        virtual public void visit(AST.Node node)
         {
             throw new NotImplementedException();
         }
 
-        public void visit(AST.Class node)
+        virtual public void visit(AST.VariableDefinition node)
         {
-            node.accept(this);
+
+        }
+
+        virtual public void visit(AST.Class node)
+        {
+            foreach (var variable in node.variables)
+                variable.accept(this);
         }
 
     }

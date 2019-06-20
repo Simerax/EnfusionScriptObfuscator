@@ -7,50 +7,14 @@ namespace Obfuscator
 {
     public struct SymbolName
     {
-        public string Old;
-        public string New;
+        public string old;
+        public string @new;
     }
     public class Obfuscator
     {
         public static readonly char[] allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_".ToCharArray();
         public static void Obfuscate(string[] paths)
         {
-            /*
-            List<SymbolName> custom_symbols = new List<SymbolName>();
-            foreach(var path in paths)
-            {
-                
-                string content = File.ReadAllText(path);
-                var tokens = EnforceScript.Tokenizer.Tokenize(content);
-                foreach(var token in tokens)
-                {
-                    if (token.keyword == EnforceScript.Keyword.symbol)
-                    {
-                        bool symbol_already_obfuscated = false;
-                        foreach (var symbol in custom_symbols)
-                        {
-                            if (symbol.Old == token.value)
-                            {
-                                symbol_already_obfuscated = true;
-                                break;
-                            }
-                        }
-
-                        if (!symbol_already_obfuscated)
-                            // need to add a check that a random name isnt used twice
-                            custom_symbols.Add(new SymbolName { Old = token.value, New = GenerateRandomName() });
-                    }
-
-                }
-                
-
-                string obfuscated = content;
-                foreach (var symbol in custom_symbols)
-                    obfuscated = obfuscated.Replace(symbol.Old, symbol.New);
-
-                File.WriteAllText(path, obfuscated);
-            }
-            */
         }
 
         public static string GenerateRandomName(int length = 25)

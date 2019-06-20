@@ -4,76 +4,44 @@ using System.Text;
 
 namespace EnforceScript
 {
-    public enum SymbolType
-    {
-        enter_scope,
-        exit_scope,
-        variable,
-        @class,
-    }
-
-    public struct Symbol
-    {
-        public SymbolType type;
-        public string value;
-    };
-
-
-    public struct Type
-    {
-        public PrimitiveType p_type;
-        public string class_name;
-
-        public Type(PrimitiveType t)
-        {
-            p_type = t;
-            class_name = "";
-        }
-    }
-
-
-    public class Variable
-    {
-        public Type type;
-        public string name;
-
-    }
-
-    public class Function
-    {
-        public Type returntype;
-        public string name;
-        public List<Type> parameters;
-    }
-
-
-    public class Class
-    {
-        public string name;
-        public string parent;
-        public bool modded = false;
-        public List<Variable> members = new List<Variable>();
-        public List<Function> methods = new List<Function>();
-    }
-
     public class Parser
     {
         private Word[] words;
         private int current_symbol_index = 0;
-        private List<Class> classes;
-        private Class current_class;
         public Parser(Word[] words)
         {
             this.words = words;
-            classes = new List<Class>();
-            current_class = new Class();
         }
 
-        private string ConsumeSymbol()
+        private string GetNextSymbol()
         {
             current_symbol_index++;
             return words[current_symbol_index - 1].value;
 
+        }
+        private Word GetLastSymbol()
+        {
+            if (current_symbol_index == 0)
+                throw new IndexOutOfRangeException("There is no Last Symbol!");
+            return words[current_symbol_index - 1];
+        }
+        private bool LastSymbol(string sym)
+        {
+            if (current_symbol_index == 0)
+                throw new IndexOutOfRangeException("There is no Last Symbol!");
+
+            if (words[current_symbol_index - 1].value == sym)
+                return true;
+            return false;
+        }
+
+        private bool CurrentSymbol(string sym)
+        {
+            if (current_symbol_index >= words.Length)
+                throw new IndexOutOfRangeException("No More Symbols");
+            if (words[current_symbol_index].value == sym)
+                return true;
+            return false;
         }
 
         private bool NextSymbol(string sym)
@@ -82,88 +50,102 @@ namespace EnforceScript
                 throw new IndexOutOfRangeException("No More Symbols");
             if (words[current_symbol_index].value == sym)
             {
-                ConsumeSymbol();
+                GetNextSymbol();
                 return true;
             }
             return false;
         }
 
-        public void parse()
+        public static AST.Node Parse(Word[] words)
         {
-            Block();
+            var p = new Parser(words);
+            return p.Parse();
         }
 
-        private void ParseClass()
+        public AST.Node Parse()
         {
             if (NextSymbol("class") || NextSymbol("modded"))
-            {
-                current_class.name = ConsumeSymbol();
-                if (NextSymbol("extends"))
-                    current_class.parent = ConsumeSymbol();
-
-                if (NextSymbol("{"))
-                    Block();
-                else
-                    throw new Exception("After a class name their should be a class definition");
-
-            } else
-            {
-                throw new Exception("Invalid Syntax - No Class Name given");
-            }
+                return Class();
+            else
+                return Block();
         }
 
-        private void Block()
+        private AST.Class Class()
         {
-            // we are in a class definition
-            if (NextSymbol("class"))
+            var cl = new AST.Class();
+            if (LastSymbol("modded"))
+                cl.modded = true;
+
+            cl.name = GetNextSymbol();
+
+            if (NextSymbol("extends"))
+                cl.parent = GetNextSymbol();
+
+            if (!NextSymbol("{"))
+                throw new AST.UnexpectedSymbolException(GetLastSymbol());
+
+
+            // Now its time to parse all the function and variable definitions of the class
+            while(!CurrentSymbol("}"))
+            {
+                var definition = Definition();
+                if (definition is AST.VariableDefinition)
+                    cl.variables.Add((AST.VariableDefinition)definition);
+                else
+                    throw new AST.UnexpectedSymbolException("LOL WHATS THIS!?");
+            }
+            return cl;
+        }
+
+
+        private AST.Definition Definition()
+        {
+            var definition = new AST.Definition();
+            var next_symbol = GetNextSymbol();
+
+            if (next_symbol == "private")
+            {
+                definition.access_modifier = AccessModifier.@private;
+                next_symbol = GetNextSymbol();
+            }
+            else if (next_symbol == "protected")
+            {
+                definition.access_modifier = AccessModifier.@protected;
+                next_symbol = GetNextSymbol();
+            }
+            else
+                definition.access_modifier = AccessModifier.@private;
+
+            var type = next_symbol;
+            definition.name = GetNextSymbol();
+
+            // now we know it's a function definition
+            if (NextSymbol("("))
             {
 
             }
-
-
-            if (NextSymbol("private") || NextSymbol("protected"))
+            else
             {
-                NextSymbol("static"); // just eat the static keyword we dont care if its there or not
-                var type_str = ConsumeSymbol();
-                var name = ConsumeSymbol();
+                AST.VariableDefinition variable = new AST.VariableDefinition(definition);
+                variable.type = type;
 
-                Type type = new Type();
-                if (Types.IsPrimitive(type_str))
-                    type.p_type = Types.ConvertToPrimitive(type_str);
+                // No Value assigned to the variable
+                if (NextSymbol(";"))
+                    return variable;
+                else if (NextSymbol("="))
+                    throw new NotImplementedException();
                 else
-                {
-                    type.p_type = PrimitiveType.@class;
-                    type.class_name = type_str;
-                }
+                    throw new NotImplementedException();
 
-                // its a function
-                if (NextSymbol("("))
-                {
-                    var fun = new Function();
-                    fun.returntype = type;
-                    fun.name = name;
-
-                    while(true)
-                    {
-                        var sym = ConsumeSymbol();
-
-
-
-                        // TODO: Add check eof
-                        if (sym == ")")
-                            break;
-                    }
-                }
-                // its a variable
-                else
-                {
-                    var variable = new Variable();
-                    variable.name = name;
-                    variable.type = type;
-                    current_class.members.Add(variable);
-                }
-                    
             }
+
+            return definition;
+        }
+
+        private AST.Node Block()
+        {
+            var next_symbol = GetNextSymbol();
+            return new AST.Block();
         }
     }
 }

@@ -38,7 +38,7 @@ namespace EnforceScript
     public class Lexer
     {
 
-        public static List<Word> lex(string content)
+        public static List<Word> Lex(string content)
         {
             var current_word = new Stack<char>();
             var words = new List<Word>();

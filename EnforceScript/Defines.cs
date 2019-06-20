@@ -16,6 +16,12 @@ namespace EnforceScript
         @class,
     }
 
+    public enum AccessModifier
+    {
+        @private,
+        @protected,
+    }
+
     public enum Keyword
     {
         // Function/Method modifiers

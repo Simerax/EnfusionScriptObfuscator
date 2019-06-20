@@ -28,7 +28,7 @@ namespace EnforceScriptTests
             expected.Add(MakeWord("private", 1, 1));
             expected.Add(MakeWord(";", 1, 8));
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -50,7 +50,7 @@ namespace EnforceScriptTests
             expected.Add(new Word("}", 6, 1));
             expected.Add(new Word("}", 7, 1));
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -72,7 +72,7 @@ namespace EnforceScriptTests
             expected.Add(new Word("}", 8, 1));
             expected.Add(new Word("}", 9, 1));
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -115,7 +115,7 @@ OnInit(x);
             expected.Add(new Word("}", 8, 1));
             expected.Add(new Word("}", 9, 1));
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -130,7 +130,7 @@ OnInit(x);
             expected.Add(new Word("_y", 1, 6));
             expected.Add(new Word(";", 1, 8));
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -147,7 +147,7 @@ OnInit(x);
             expected.Add(new Word(";", 1, 25));
 
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -166,7 +166,7 @@ OnInit(x);
             expected.Add(new Word("x", 1, 31));
             expected.Add(new Word(";", 1, 32));
 
-            var actual = Lexer.lex(input);
+            var actual = Lexer.Lex(input);
 
             Assert.AreEqual(expected, actual);
         }
@@ -186,7 +186,7 @@ OnInit(x);
             expected.Add(new Word(";", 1, 13));
 
 
-            var result = Lexer.lex(input);
+            var result = Lexer.Lex(input);
 
             Assert.AreEqual(expected, result);
         }
