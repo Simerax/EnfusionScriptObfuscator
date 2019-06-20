@@ -15,9 +15,11 @@ namespace Obfuscator
         public static readonly char[] allowed_chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz_".ToCharArray();
         public static void Obfuscate(string[] paths)
         {
+            /*
             List<SymbolName> custom_symbols = new List<SymbolName>();
             foreach(var path in paths)
             {
+                
                 string content = File.ReadAllText(path);
                 var tokens = EnforceScript.Tokenizer.Tokenize(content);
                 foreach(var token in tokens)
@@ -40,6 +42,7 @@ namespace Obfuscator
                     }
 
                 }
+                
 
                 string obfuscated = content;
                 foreach (var symbol in custom_symbols)
@@ -47,6 +50,7 @@ namespace Obfuscator
 
                 File.WriteAllText(path, obfuscated);
             }
+            */
         }
 
         public static string GenerateRandomName(int length = 25)

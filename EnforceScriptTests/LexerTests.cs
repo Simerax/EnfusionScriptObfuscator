@@ -6,16 +6,17 @@ using EnforceScript;
 
 namespace EnforceScriptTests
 {
-    class TokenizerTests
+    class LexerTests
     {
 
-        public List<Token> MakeEmptyTokenList()
+        public List<Word> MakeEmptySymbolList()
         {
-            return new List<Token>();
+            return new List<Word>();
         }
-        public List<Symbol> MakeEmptySymbolList()
+
+        public Word MakeWord(string value, uint line, uint column)
         {
-            return new List<Symbol>();
+            return new Word { value = value, location = new Location(line, column) };
         }
 
 
@@ -24,10 +25,54 @@ namespace EnforceScriptTests
         {
             string input = "private;";
             var expected = MakeEmptySymbolList();
-            expected.Add(new Symbol { value = "private" });
-            expected.Add(new Symbol { value = ";" });
+            expected.Add(MakeWord("private", 1, 1));
+            expected.Add(MakeWord(";", 1, 8));
 
-            var result = Tokenizer.ReadSymbols(input);
+            var result = Lexer.lex(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void IgnoreOneLineComments()
+        {
+            string input = "class Test\n{\n// This is a comment and class is not interpreted\nvoid Test()\n{\n}\n}";
+
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Word("class", 1, 1));
+            expected.Add(new Word("Test", 1, 7));
+            expected.Add(new Word("{", 2, 1));
+            expected.Add(new Word("void", 4, 1));
+            expected.Add(new Word("Test", 4, 6));
+            expected.Add(new Word("(", 4, 10));
+            expected.Add(new Word(")", 4, 11));
+            expected.Add(new Word("{", 5, 1));
+            expected.Add(new Word("}", 6, 1));
+            expected.Add(new Word("}", 7, 1));
+
+            var result = Lexer.lex(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void IgnoreMultiLineComments()
+        {
+            string input = "class Test\n{\n    /*\n    This is a comment and class is not interpreted\n*/\nvoid Test()\n{\n}\n}";
+
+            var expected = MakeEmptySymbolList();
+            expected.Add(new Word("class", 1, 1));
+            expected.Add(new Word("Test", 1, 7));
+            expected.Add(new Word("{", 2, 1));
+            expected.Add(new Word("void", 6, 1));
+            expected.Add(new Word("Test", 6, 6));
+            expected.Add(new Word("(", 6, 10));
+            expected.Add(new Word(")", 6, 11));
+            expected.Add(new Word("{", 7, 1));
+            expected.Add(new Word("}", 8, 1));
+            expected.Add(new Word("}", 9, 1));
+
+            var result = Lexer.lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -35,41 +80,42 @@ namespace EnforceScriptTests
         [Test]
         public void ParseSymbols_ClassDefinition()
         {
-            string input = @"
-                class BlurFade extends TimerBase
-                {
-                    protected bool m_fade_out;
+            string input = @"class BlurFade extends TimerBase
+{
+protected bool m_fade_out;
 
-                    void BlurFade()
-                    {
-                        OnInit();
-                    }
-                }
+void BlurFade(float x)
+{
+OnInit(x);
+}
+}
             ";
             var expected = MakeEmptySymbolList();
-            expected.Add(new Symbol { value = "class" });
-            expected.Add(new Symbol { value = "BlurFade" });
-            expected.Add(new Symbol { value = "extends" });
-            expected.Add(new Symbol { value = "TimerBase" });
-            expected.Add(new Symbol { value = "{" });
-            expected.Add(new Symbol { value = "protected" });
-            expected.Add(new Symbol { value = "bool" });
-            expected.Add(new Symbol { value = "m_fade_out" });
-            expected.Add(new Symbol { value = ";" });
-            expected.Add(new Symbol { value = "void" });
-            expected.Add(new Symbol { value = "BlurFade" });
-            expected.Add(new Symbol { value = "(" });
-            expected.Add(new Symbol { value = ")" });
-            expected.Add(new Symbol { value = "{" });
-            expected.Add(new Symbol { value = "OnInit" });
-            expected.Add(new Symbol { value = "(" });
-            expected.Add(new Symbol { value = ")" });
-            expected.Add(new Symbol { value = ";" });
-            expected.Add(new Symbol { value = "}" });
-            expected.Add(new Symbol { value = "}" });
+            expected.Add(new Word("class", 1, 1));
+            expected.Add(new Word("BlurFade", 1, 7));
+            expected.Add(new Word("extends", 1, 16));
+            expected.Add(new Word("TimerBase", 1, 24));
+            expected.Add(new Word("{", 2, 1));
+            expected.Add(new Word("protected", 3, 1));
+            expected.Add(new Word("bool", 3, 11));
+            expected.Add(new Word("m_fade_out", 3, 16));
+            expected.Add(new Word(";", 3, 26));
+            expected.Add(new Word("void", 5, 1));
+            expected.Add(new Word("BlurFade", 5, 6));
+            expected.Add(new Word("(", 5, 14));
+            expected.Add(new Word("float", 5, 15));
+            expected.Add(new Word("x", 5, 21));
+            expected.Add(new Word(")", 5, 22));
+            expected.Add(new Word("{", 6, 1));
+            expected.Add(new Word("OnInit", 7, 1));
+            expected.Add(new Word("(", 7, 7));
+            expected.Add(new Word("x", 7, 8));
+            expected.Add(new Word(")", 7, 9));
+            expected.Add(new Word(";", 7, 10));
+            expected.Add(new Word("}", 8, 1));
+            expected.Add(new Word("}", 9, 1));
 
-
-            var result = Tokenizer.ReadSymbols(input);
+            var result = Lexer.lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -79,12 +125,12 @@ namespace EnforceScriptTests
         {
             string input = "node._y;";
             var expected = MakeEmptySymbolList();
-            expected.Add(new Symbol { value = "node" });
-            expected.Add(new Symbol { value = "." });
-            expected.Add(new Symbol { value = "_y" });
-            expected.Add(new Symbol { value = ";" });
+            expected.Add(new Word("node", 1, 1));
+            expected.Add(new Word(".", 1, 5));
+            expected.Add(new Word("_y", 1, 6));
+            expected.Add(new Word(";", 1, 8));
 
-            var result = Tokenizer.ReadSymbols(input);
+            var result = Lexer.lex(input);
 
             Assert.AreEqual(expected, result);
         }
@@ -94,15 +140,35 @@ namespace EnforceScriptTests
         {
             string input = "static const string node;";
             var expected = MakeEmptySymbolList();
-            expected.Add(new Symbol { value = "static" });
-            expected.Add(new Symbol { value = "const" });
-            expected.Add(new Symbol { value = "string" });
-            expected.Add(new Symbol { value = "node" });
-            expected.Add(new Symbol { value = ";" });
+            expected.Add(new Word("static", 1, 1));
+            expected.Add(new Word("const", 1, 8));
+            expected.Add(new Word("string", 1, 14));
+            expected.Add(new Word("node", 1, 21));
+            expected.Add(new Word(";", 1, 25));
 
-            var result = Tokenizer.ReadSymbols(input);
+
+            var result = Lexer.lex(input);
 
             Assert.AreEqual(expected, result);
+        }
+
+        [Test]
+        public void ParseSymbols_VariableDefinition_02()
+        {
+            string input = "static const string ModName = x;";
+            var expected = MakeEmptySymbolList();
+
+            expected.Add(new Word("static", 1, 1));
+            expected.Add(new Word("const", 1, 8));
+            expected.Add(new Word("string", 1, 14));
+            expected.Add(new Word("ModName", 1, 21));
+            expected.Add(new Word("=", 1, 29));
+            expected.Add(new Word("x", 1, 31));
+            expected.Add(new Word(";", 1, 32));
+
+            var actual = Lexer.lex(input);
+
+            Assert.AreEqual(expected, actual);
         }
 
         [Test]
@@ -110,31 +176,24 @@ namespace EnforceScriptTests
         {
             string input = "nodes.add(x);";
             var expected = MakeEmptySymbolList();
-            expected.Add(new Symbol { value = "nodes" });
-            expected.Add(new Symbol { value = "." });
-            expected.Add(new Symbol { value = "add" });
-            expected.Add(new Symbol { value = "(" });
-            expected.Add(new Symbol { value = "x" });
-            expected.Add(new Symbol { value = ")" });
-            expected.Add(new Symbol { value = ";" });
 
-            var result = Tokenizer.ReadSymbols(input);
+            expected.Add(new Word("nodes", 1, 1));
+            expected.Add(new Word(".", 1, 6));
+            expected.Add(new Word("add", 1, 7));
+            expected.Add(new Word("(", 1, 10));
+            expected.Add(new Word("x", 1, 11));
+            expected.Add(new Word(")", 1, 12));
+            expected.Add(new Word(";", 1, 13));
 
-            Assert.AreEqual(expected, result);
-        }
 
-        [Test]
-        public void ParseSingleCommand()
-        {
-            string input = "private";
-            var expected = MakeEmptyTokenList();
-            expected.Add(new Token { keyword = Keyword.@private });
-
-            var result = Tokenizer.Tokenize("private");
+            var result = Lexer.lex(input);
 
             Assert.AreEqual(expected, result);
         }
 
+
+
+        /*
         [Test]
         public void Parse_VariableDefinition()
         {
@@ -154,7 +213,7 @@ namespace EnforceScriptTests
         [Test]
         public void AssignVariableToVariable()
         {
-            string input = "static const string ModName = x";
+            string input = "static const string ModName = x;";
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@static });
             expected.Add(new Token { keyword = Keyword.@const });
@@ -226,7 +285,7 @@ namespace EnforceScriptTests
 
             Assert.AreEqual(expected, actual);
         }
-        */
+        
 
         [Test]
         public void Parse_ChainedFunctionCall()
@@ -257,6 +316,23 @@ namespace EnforceScriptTests
             Assert.AreEqual(expected, actual);
         }
 
+        [Test]
+        public void Parse_ClassDefinition_01()
+        {
+            string input = @"
+                class BlurFade extends TimerBase { }
+            ";
+            var expected = MakeEmptyTokenList();
+            expected.Add(new Token { keyword = Keyword.@class });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "BlurFade" });
+            expected.Add(new Token { keyword = Keyword.extends });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "TimerBase" });
+
+            var result = Tokenizer.Tokenize(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
 
         /*Reworking the Tokenizer.. these tests will eventual be reused*/
         /*
@@ -275,6 +351,9 @@ namespace EnforceScriptTests
             Assert.AreEqual(expected, actual);
         }
 
+        
+
+            
 
         [Test]
         public void Parse_BuiltinArrayAndVectorType()
@@ -283,42 +362,43 @@ namespace EnforceScriptTests
 
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@ref });
-            expected.Add(new Token { keyword = Keyword.@array });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "array" });
             expected.Add(new Token { keyword = Keyword.@ref });
-            expected.Add(new Token { keyword = Keyword.Vector2 });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "Vector2" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
 
             var actual = Tokenizer.Tokenize(input);
 
             Assert.AreEqual(expected, actual);
         }
 
+
         [Test]
         public void Parse_ComplexStructure01()
         {
             string input = @"
-class Area2d
-{
-	float m_nodes;
+                class Area2d
+                {
+	                float m_nodes;
 	
-	void Area2d(float nodes)
-	{
-		m_nodes = nodes;
-	}
-}
+	                void Area2d(float nodes)
+	                {
+		                m_nodes = nodes;
+	                }
+                }
             ";
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@class });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "Area2d" });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "Area2d" });
             expected.Add(new Token { keyword = Keyword.@float });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
             expected.Add(new Token { keyword = Keyword.@void });
-            expected.Add(new Token { keyword = Keyword.@symbol, value = "Area2d" });
+            expected.Add(new Token { keyword = Keyword.@symbol_function, value = "Area2d" });
             expected.Add(new Token { keyword = Keyword.@float });
-            expected.Add(new Token { keyword = Keyword.@symbol, value = "nodes" });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "m_nodes" });
+            expected.Add(new Token { keyword = Keyword.@symbol_variable, value = "nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_nodes" });
             expected.Add(new Token { keyword = Keyword.@operator, value = "=" });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "nodes" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "nodes" });
 
 
             var actual = Tokenizer.Tokenize(input);
@@ -342,20 +422,21 @@ class Area2d
             ";
             var expected = MakeEmptyTokenList();
             expected.Add(new Token { keyword = Keyword.@class });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "BlurFade" });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "BlurFade" });
             expected.Add(new Token { keyword = Keyword.extends });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "TimerBase" });
+            expected.Add(new Token { keyword = Keyword.symbol_class, value = "TimerBase" });
             expected.Add(new Token { keyword = Keyword.@protected });
             expected.Add(new Token { keyword = Keyword.@bool });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "m_fade_out" });
+            expected.Add(new Token { keyword = Keyword.symbol_variable, value = "m_fade_out" });
             expected.Add(new Token { keyword = Keyword.@void });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "BlurFade" });
-            expected.Add(new Token { keyword = Keyword.symbol, value = "OnInit" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "BlurFade" });
+            expected.Add(new Token { keyword = Keyword.symbol_function, value = "OnInit" });
 
             var result = Tokenizer.Tokenize(input);
 
             Assert.AreEqual(expected, result);
         }
         */
+
     }
 }
