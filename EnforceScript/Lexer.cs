@@ -44,6 +44,7 @@ namespace EnforceScript
             var words = new List<Word>();
             bool inside_oneline_comment = false;
             bool inside_multiline_comment = false;
+            bool inside_string_literal = false;
 
             Location current_location = new Location(1, 0);
 
@@ -64,6 +65,20 @@ namespace EnforceScript
                     current_location.line++;
                     current_location.column = 1;
                 }
+
+
+                if (current_char == '"' && previous_char != '\\')
+                    if (!inside_string_literal)
+                        inside_string_literal = true;
+                    else
+                        inside_string_literal = false;
+
+                if (inside_string_literal)
+                {
+                    current_word.Push(current_char);
+                    continue;
+                }
+
 
                 // One line comment
                 if (current_char == '/' && next_char == '/')

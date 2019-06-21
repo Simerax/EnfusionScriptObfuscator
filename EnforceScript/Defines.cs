@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace EnforceScript
 {
@@ -66,6 +67,7 @@ namespace EnforceScript
         @foreach,
     }
 
+
     public class Types
     {
         public static bool IsPrimitive(string word)
@@ -85,14 +87,39 @@ namespace EnforceScript
         }
     }
 
-    public class Tokens
+    public class Symbol
     {
+        public static readonly string[] prefix_operators = {
+            "!",
+            "-",
+            "+"
+        };
         public static bool IsKeyword(string word)
         {
             Keyword k;
             if (Enum.TryParse(word, out k))
                 return true;
             return false;
+        }
+
+        public static bool IsStringLiteral(string word)
+        {
+            if (word.StartsWith("\"") && word.EndsWith("\""))
+                return true;
+            return false;
+        }
+
+        public static bool IsPrefixOperator(string word)
+        {
+            foreach (var op in prefix_operators)
+                if (op == word)
+                    return true;
+            return false;
+        }
+
+        public static bool IsNumber(string word)
+        {
+            return Regex.IsMatch(word, "^[-+]?[0-9]+(\\.[0-9]+)?$");
         }
     }
 }

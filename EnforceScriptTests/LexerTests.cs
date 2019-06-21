@@ -34,6 +34,23 @@ namespace EnforceScriptTests
         }
 
         [Test]
+        public void StringLiteral()
+        {
+            string input = "private x = \"lol this is a string 123\";";
+            var expected = MakeEmptySymbolList();
+            expected.Add(MakeWord("private", 1, 1));
+            expected.Add(MakeWord("x", 1, 9));
+            expected.Add(MakeWord("=", 1, 11));
+            expected.Add(MakeWord("\"lol this is a string 123\"", 1, 13));
+            expected.Add(MakeWord(";", 1, 39));
+
+            var result = Lexer.Lex(input);
+
+            Assert.AreEqual(expected, result);
+        }
+
+
+        [Test]
         public void IgnoreOneLineComments()
         {
             string input = "class Test\n{\n// This is a comment and class is not interpreted\nvoid Test()\n{\n}\n}";

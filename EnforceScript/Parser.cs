@@ -19,6 +19,14 @@ namespace EnforceScript
             return words[current_symbol_index - 1].value;
 
         }
+
+        private string GetCurrentSymbol()
+        {
+            if (current_symbol_index >= words.Length)
+                throw new IndexOutOfRangeException("No More Symbols");
+            return words[current_symbol_index].value;
+        }
+
         private Word GetLastSymbol()
         {
             if (current_symbol_index == 0)
@@ -35,6 +43,14 @@ namespace EnforceScript
             return false;
         }
 
+        private bool GoToPreviousSymbol()
+        {
+            if (current_symbol_index == 0)
+                throw new IndexOutOfRangeException("There is no Symbol before this one");
+            current_symbol_index--;
+            return true;
+        }
+
         private bool CurrentSymbol(string sym)
         {
             if (current_symbol_index >= words.Length)
@@ -44,7 +60,7 @@ namespace EnforceScript
             return false;
         }
 
-        private bool NextSymbol(string sym)
+        private bool Accept(string sym)
         {
             if (current_symbol_index >= words.Length)
                 throw new IndexOutOfRangeException("No More Symbols");
@@ -56,6 +72,65 @@ namespace EnforceScript
             return false;
         }
 
+        private bool Accept(bool val)
+        {
+            if (current_symbol_index >= words.Length)
+                throw new IndexOutOfRangeException("No More Symbols");
+            if(val)
+            {
+                GetNextSymbol();
+                return true;
+            }
+            return false;
+        }
+
+        private bool Id()
+        {
+            var next_symbol = GetNextSymbol();
+
+            if (Symbol.IsKeyword(next_symbol) || Symbol.IsStringLiteral(next_symbol))
+                return false;
+            else
+                return true;
+        }
+
+        private bool Expect(bool val)
+        {
+            if (current_symbol_index >= words.Length)
+                throw new IndexOutOfRangeException("No More Symbols");
+            if (val)
+                return true;
+            else
+                throw new AST.UnexpectedSymbolException(words[current_symbol_index]);
+        }
+
+        private bool PrefixOperator()
+        {
+            return Symbol.IsPrefixOperator(GetCurrentSymbol());
+        }
+
+        private bool StringLiteral()
+        {
+            return Symbol.IsStringLiteral(GetCurrentSymbol());
+        }
+
+        private bool Number()
+        {
+            return Symbol.IsNumber(GetCurrentSymbol());
+        }
+
+        private bool Expect(string sym)
+        {
+            if (current_symbol_index >= words.Length)
+                throw new IndexOutOfRangeException("No More Symbols");
+            if (words[current_symbol_index].value == sym)
+            {
+                GetNextSymbol();
+                return true;
+            }
+            throw new AST.UnexpectedSymbolException(words[current_symbol_index]);
+        }
+
         public static AST.Node Parse(Word[] words)
         {
             var p = new Parser(words);
@@ -64,7 +139,7 @@ namespace EnforceScript
 
         public AST.Node Parse()
         {
-            if (NextSymbol("class") || NextSymbol("modded"))
+            if (Accept("class") || Accept("modded"))
                 return Class();
             else
                 return Block();
@@ -78,12 +153,10 @@ namespace EnforceScript
 
             cl.name = GetNextSymbol();
 
-            if (NextSymbol("extends"))
-                cl.parent = GetNextSymbol();
+            if (Accept("extends"))
+                cl.extends = GetNextSymbol();
 
-            if (!NextSymbol("{"))
-                throw new AST.UnexpectedSymbolException(GetLastSymbol());
-
+            Expect("{");
 
             // Now its time to parse all the function and variable definitions of the class
             while(!CurrentSymbol("}"))
@@ -91,12 +164,82 @@ namespace EnforceScript
                 var definition = Definition();
                 if (definition is AST.VariableDefinition)
                     cl.variables.Add((AST.VariableDefinition)definition);
+                else if (definition is AST.FunctionDefinition)
+                    cl.functions.Add((AST.FunctionDefinition)definition);
                 else
-                    throw new AST.UnexpectedSymbolException("LOL WHATS THIS!?");
+                    throw new AST.UnexpectedSymbolException(words[current_symbol_index]);
             }
             return cl;
         }
 
+        private AST.Statement Statement()
+        {
+            var statement = new AST.Statement();
+            return statement;
+        }
+
+        private AST.Term Term()
+        {
+            var term = new AST.Term();
+
+            if (Accept(PrefixOperator()))
+                term.prefix = GetLastSymbol().value;
+            if (Accept(StringLiteral()))
+            {
+                term.isLiteral = true;
+                term.value = new AST.StringLiteral(GetLastSymbol());
+            }
+            if(Accept(Number()))
+            {
+                term.isLiteral = true;
+                term.value = new AST.Number(GetLastSymbol());
+            }
+
+            return term;
+        }
+
+        private AST.Expression Expression()
+        {
+            var exp = new AST.Expression();
+            exp.value = Term();
+
+            Expect(";");
+            return exp;
+        }
+
+
+
+        private List<AST.Arg> ArgList()
+        {
+            var args = new List<AST.Arg>();
+
+            if(Expect("("))
+            {
+                // read all the arguments
+                while(true)
+                {
+                    var argument = new AST.Arg();
+
+                    // first we expect the type then the name
+                    if(Expect(Id()))
+                        argument.type = GetCurrentSymbol();
+                    if (Expect(Id()))
+                        argument.name = GetCurrentSymbol();
+
+                    if (Accept("=")) // Default value for argument
+                        throw new NotImplementedException();
+                    if (Accept(",")) // next argument
+                        args.Add(argument);
+                    else if (Accept(")")) // no more arguments left
+                    {
+                        args.Add(argument);
+                        break;
+                    }
+                }
+            }
+
+            return args;
+        }
 
         private AST.Definition Definition()
         {
@@ -120,9 +263,11 @@ namespace EnforceScript
             definition.name = GetNextSymbol();
 
             // now we know it's a function definition
-            if (NextSymbol("("))
+            if (Accept("("))
             {
-
+                GoToPreviousSymbol();
+                AST.FunctionDefinition function = new AST.FunctionDefinition(definition);
+                function.args = ArgList();
             }
             else
             {
@@ -130,13 +275,18 @@ namespace EnforceScript
                 variable.type = type;
 
                 // No Value assigned to the variable
-                if (NextSymbol(";"))
+                if (Accept(";"))
                     return variable;
-                else if (NextSymbol("="))
-                    throw new NotImplementedException();
+                else if (Accept("="))
+                {
+                    var assignment = new AST.Assignment();
+                    assignment.left = variable;
+                    assignment.right = Expression();
+                    variable.init = assignment;
+                    return variable;
+                }
                 else
-                    throw new NotImplementedException();
-
+                    throw new AST.UnexpectedSymbolException(GetLastSymbol());
             }
 
             return definition;
