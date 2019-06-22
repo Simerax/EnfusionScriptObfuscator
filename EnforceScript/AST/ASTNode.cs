@@ -66,10 +66,59 @@ namespace EnforceScript.AST
         }
     }
 
+    public class True : Node
+    {
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+    public class False : Node
+    {
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+
+    public class If : Node
+    {
+        // If condition then {} else {}
+        public Condition condition;
+        public Block then;
+        public Block @else;
+
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+
+    public class Condition : Node
+    {
+        public Node left;
+        public string @operator;
+        public Node right;
+        public bool single_expression = false; // if the condition only contains a single expression (in left)
+
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+
+    }
+
     public class Assignment : Node
     {
         public Node left;
         public Node right;
+
+        public Assignment() { }
+        public Assignment(Node left, Node right)
+        {
+            this.left = left;
+            this.right = right;
+        }
 
         public override void accept(Visitor v)
         {
@@ -103,6 +152,22 @@ namespace EnforceScript.AST
 
     }
 
+    public class ScopeEnter : Definition
+    {
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+
+    public class ScopeExit : Definition
+    {
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+
     /*
         https://community.bistudio.com/wiki/DayZ:Enforce_Script_Syntax#Variable_modifiers 
     */
@@ -118,6 +183,26 @@ namespace EnforceScript.AST
             this.access_modifier = d.access_modifier;
             this.@static = d.@static;
         }
+
+        public VariableDefinition(string name, string type, bool @const = false, bool @static = false, Assignment init = null)
+        {
+            this.name = name;
+            this.type = type;
+            this.@static = @static;
+            this.@const = @const;
+            this.init = init;
+            this.access_modifier = AccessModifier.method;
+        }
+
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
+        }
+    }
+
+    public class Variable : Node
+    {
+        public VariableDefinition definition;
 
         public override void accept(Visitor v)
         {
@@ -135,6 +220,10 @@ namespace EnforceScript.AST
             this.name = d.name;
             this.access_modifier = d.access_modifier;
             this.@static = d.@static;
+        }
+        public override void accept(Visitor v)
+        {
+            v.visit(this);
         }
     }
 
@@ -171,6 +260,7 @@ namespace EnforceScript.AST
 
     public class Block : Node
     {
+        public List<Statement> statements = new List<Statement>();
         public override void accept(Visitor v)
         {
             v.visit(this);

@@ -19,8 +19,12 @@ namespace EnforceScript
 
     public enum AccessModifier
     {
+        // definition within class
         @private,
         @protected,
+
+        // Variable definition inside a method
+        @method, 
     }
 
     public enum Keyword
@@ -94,6 +98,26 @@ namespace EnforceScript
             "-",
             "+"
         };
+
+        public static readonly string[] infix_operators = {
+            "=",
+            "==",
+            "!=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+        };
+
+        public static readonly string[] comparison_operators = {
+            "==",
+            "!=",
+            "<",
+            "<=",
+            ">",
+            ">=",
+        };
+
         public static bool IsKeyword(string word)
         {
             Keyword k;
@@ -112,6 +136,29 @@ namespace EnforceScript
         public static bool IsPrefixOperator(string word)
         {
             foreach (var op in prefix_operators)
+                if (op == word)
+                    return true;
+            return false;
+        }
+
+        public static bool IsInfixOperator(string word)
+        {
+            foreach (var op in infix_operators)
+                if (op == word)
+                    return true;
+            return false;
+        }
+
+        public static bool IsOperator(string word)
+        {
+            if (IsPrefixOperator(word) || IsInfixOperator(word))
+                return true;
+            return false;
+        }
+
+        public static bool IsComparisonOperator(string word)
+        {
+            foreach (var op in comparison_operators)
                 if (op == word)
                     return true;
             return false;

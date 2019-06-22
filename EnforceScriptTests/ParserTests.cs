@@ -13,6 +13,7 @@ namespace EnforceScriptTests
     public class TestVisitor : Visitor
     {
         public Action<VariableDefinition> OnVariableDefinition;
+        public Action<FunctionDefinition> OnFunctionDefinition;
         public Action<Class> OnClass;
 
         public override void visit(Class node)
@@ -24,6 +25,12 @@ namespace EnforceScriptTests
         public override void visit(VariableDefinition node)
         {
             OnVariableDefinition?.Invoke(node);
+            base.visit(node);
+        }
+
+        public override void visit(FunctionDefinition node)
+        {
+            OnFunctionDefinition?.Invoke(node);
             base.visit(node);
         }
     }
@@ -126,7 +133,35 @@ namespace EnforceScriptTests
         }
 
         [Test]
-        public void VariableDefinition()
+        public void VariableDeclarationStringLiteral()
+        {
+            string content = "class Test { protected string l = \"lol\"; }";
+
+            var result = LexAndParse(content);
+            var visitor = new TestVisitor();
+
+            VariableDefinition l = null;
+
+            visitor.OnVariableDefinition += (VariableDefinition vd) => {
+                if (vd.name == "l")
+                    l = vd;
+            };
+
+            visitor.visit((dynamic)result);
+
+            Assert.NotNull(l);
+
+            Assert.IsInstanceOf<Expression>((dynamic)l.init.right);
+            Assert.IsInstanceOf<StringLiteral>(((Term)((Expression)l.init.right).value).value);
+            Assert.AreEqual("\"lol\"", ((StringLiteral)((Term)((Expression)l.init.right).value).value).value);
+
+            Assert.AreEqual("l", l.name);
+            Assert.AreEqual("string", l.type);
+            Assert.AreEqual(AccessModifier.@protected, l.access_modifier);
+        }
+
+        [Test]
+        public void VariableDefinitionAndDeclaration()
         {
             string content = @"
             class Test
@@ -166,6 +201,126 @@ namespace EnforceScriptTests
             Assert.AreEqual("string", l.type);
             Assert.AreEqual(AccessModifier.@protected, l.access_modifier);
 
+        }
+
+
+        [Test]
+        public void FunctionDefinition()
+        {
+            string content = "class Test { protected string GetString(){} }";
+
+            var result = LexAndParse(content);
+            var visitor = new TestVisitor();
+
+            FunctionDefinition f = null;
+
+            visitor.OnFunctionDefinition += (FunctionDefinition fd) =>
+            {
+                if (fd.name == "GetString")
+                    f = fd;
+            };
+
+            visitor.visit((dynamic)result);
+
+            Assert.NotNull(f);
+            Assert.AreEqual("GetString", f.name);
+            Assert.AreEqual("string", f.return_type);
+            Assert.AreEqual(AccessModifier.@protected, f.access_modifier);
+            Assert.AreEqual(false, f.@static);
+            Assert.AreEqual(new List<Arg>(),f.args); // No Arguments e.g. empty arguments list
+        }
+
+        [Test]
+        public void StaticFunctionDefinition()
+        {
+            string content = "class Test { protected static string GetString(){} }";
+
+            var result = LexAndParse(content);
+            var visitor = new TestVisitor();
+
+            FunctionDefinition f = null;
+
+            visitor.OnFunctionDefinition += (FunctionDefinition fd) =>
+            {
+                if (fd.name == "GetString")
+                    f = fd;
+            };
+
+            visitor.visit((dynamic)result);
+
+            Assert.NotNull(f);
+            Assert.AreEqual("GetString", f.name);
+            Assert.AreEqual("string", f.return_type);
+            Assert.AreEqual(AccessModifier.@protected, f.access_modifier);
+            Assert.AreEqual(true, f.@static);
+            Assert.AreEqual(new List<Arg>(), f.args); // No Arguments e.g. empty arguments list
+        }
+
+
+        [Test]
+        public void DoubleStaticFunctionDefinition()
+        {
+            // I guess this should not be allowed but the EnforceScript Implementation actually allows this
+            string content = "class Test { static protected static string GetString(){} }";
+
+            var result = LexAndParse(content);
+            var visitor = new TestVisitor();
+
+            FunctionDefinition f = null;
+
+            visitor.OnFunctionDefinition += (FunctionDefinition fd) =>
+            {
+                if (fd.name == "GetString")
+                    f = fd;
+            };
+
+            visitor.visit((dynamic)result);
+
+            Assert.NotNull(f);
+            Assert.AreEqual("GetString", f.name);
+            Assert.AreEqual("string", f.return_type);
+            Assert.AreEqual(AccessModifier.@protected, f.access_modifier);
+            Assert.AreEqual(true, f.@static);
+            Assert.AreEqual(new List<Arg>(), f.args); // No Arguments e.g. empty arguments list
+        }
+
+
+        [Test]
+        public void IfStatement()
+        {
+            // I guess this should not be allowed but the EnforceScript Implementation actually allows this
+            string content = @"
+            class Test 
+            { 
+                static protected void GetInt() {
+                    int x = 25;
+                    if(true) {
+                        x = 15;
+                    }
+                } 
+            }";
+
+            var result = LexAndParse(content);
+            var visitor = new TestVisitor();
+
+            VariableDefinition x = null;
+
+            visitor.OnVariableDefinition += (VariableDefinition vd) => 
+            {
+                if (vd.name == "x")
+                    x = vd;
+            };
+
+
+            visitor.visit((dynamic)result);
+
+            Assert.NotNull(x);
+
+            Assert.AreEqual("x", x.name);
+            Assert.IsInstanceOf<Expression>(x.init.right);
+            Assert.IsInstanceOf<Term>(((Expression)x.init.right).value);
+            Assert.IsInstanceOf<Number>(((Term)((Expression)x.init.right).value).value);
+            Assert.AreEqual("25", ((Number)((Term)((Expression)x.init.right).value).value).value);
         }
 
     }
